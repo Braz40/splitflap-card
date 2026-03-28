@@ -24,15 +24,20 @@
  *   rows: 6                     # default 6
  *   columns: 22                 # default 22
  *   font_size: auto             # "auto" scales to card, or px value e.g. "24px"
+ *   font_family: "Courier New"  # any installed or Google Font name
+ *   font_weight: "bold"         # "light" (300), "normal" (400), "bold" (700), "extra-bold" (800)
  *   animation: true             # set false for e-ink displays (instant update, no scramble)
  *   scramble_duration: 600      # ms per tile scramble animation
  *   stagger_delay: 25           # ms stagger between tiles
+ *   color_mode: "default"       # "default" (dark tiles) or "random" (each tile keeps a random colour)
+ *   bar_style: "rainbow"        # "rainbow" (multicolour), "solid" (accent colour), "off" (hidden)
+ *   background_color: "#1a1a1a" # board background colour
  *   sound: false                # enable click sound (default off)
  *   sound_type: "mechanical"    # "mechanical" (click+flutter+thud) or "soft" (gentle clack)
  *   sound_delay: 0              # ms offset to adjust sound timing vs animation (can be negative)
  *   sound_every: 3              # play a sound every N tiles (1 = every tile, 3 = every 3rd)
- *   accent_color: "#e8572a"     # top/bottom bar colour
- *   scramble_colors:            # colours shown during scramble
+ *   accent_color: "#e8572a"     # bar colour (used by solid bar style)
+ *   scramble_colors:            # colours shown during scramble (and used by random color_mode)
  *     - "#e8572a"
  *     - "#f5a623"
  *     - "#4a90d9"
@@ -40,22 +45,38 @@
  *     - "#bd10e0"
  *   word_wrap: true             # wrap words across rows (vs truncate)
  *   line_separator: "|"         # character to force a new line in message
- *
- * Pushing messages:
- *   - Set the input_text via the HA UI
- *   - Or call input_text.set_value in automations/scripts:
- *       service: input_text.set_value
- *       target:
- *         entity_id: input_text.splitflap_message
- *       data:
- *         value: "HELLO WORLD"
- *   - Use "|" (or your line_separator) for manual line breaks:
- *       value: "LINE ONE|LINE TWO|LINE THREE"
  */
 
-const VALID_CHARS = ' ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%&()-+=[]:;\x27",.<>?/°';
+const VALID_CHARS = ' ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%&()-+=[]:;\x27",.<>?/\u00b0';
 const DEFAULT_SCRAMBLE_COLORS = ['#e8572a', '#f5a623', '#4a90d9', '#7ed321', '#bd10e0'];
 const DEFAULT_ACCENT = '#e8572a';
+
+const FONT_WEIGHT_MAP = {
+  'light': 300,
+  'normal': 400,
+  'bold': 700,
+  'extra-bold': 800,
+};
+
+// Google Fonts that work well for split-flap displays
+const FONT_PRESETS = [
+  'Courier New',
+  'Consolas',
+  'Roboto Mono',
+  'JetBrains Mono',
+  'Fira Mono',
+  'Source Code Pro',
+  'IBM Plex Mono',
+  'Space Mono',
+  'Ubuntu Mono',
+  'PT Mono',
+];
+
+// Google Fonts that need loading (not system fonts)
+const GOOGLE_FONTS = new Set([
+  'Roboto Mono', 'JetBrains Mono', 'Fira Mono', 'Source Code Pro',
+  'IBM Plex Mono', 'Space Mono', 'Ubuntu Mono', 'PT Mono',
+]);
 
 class SplitflapCard extends HTMLElement {
   constructor() {
@@ -68,6 +89,7 @@ class SplitflapCard extends HTMLElement {
     this._rendered = false;
     this._lastValue = null;
     this._audioCtx = null;
+    this._loadedFonts = new Set();
   }
 
   /* ── HA plumbing ─────────────────────────────────── */
@@ -81,9 +103,14 @@ class SplitflapCard extends HTMLElement {
       entity: '',
       rows: 6,
       columns: 22,
+      font_family: 'Courier New',
+      font_weight: 'bold',
       animation: true,
       scramble_duration: 600,
       stagger_delay: 25,
+      color_mode: 'default',
+      bar_style: 'rainbow',
+      background_color: '#1a1a1a',
       sound: false,
       sound_type: 'mechanical',
       sound_delay: 0,
@@ -101,9 +128,14 @@ class SplitflapCard extends HTMLElement {
     this._config = {
       rows: 6,
       columns: 22,
+      font_family: 'Courier New',
+      font_weight: 'bold',
       animation: true,
       scramble_duration: 600,
       stagger_delay: 25,
+      color_mode: 'default',
+      bar_style: 'rainbow',
+      background_color: '#1a1a1a',
       sound: false,
       sound_type: 'mechanical',
       sound_delay: 0,
@@ -124,6 +156,10 @@ class SplitflapCard extends HTMLElement {
     this._hass = hass;
     if (!this._rendered) this._render();
 
+    // Pass hass to editor if it exists
+    const editor = this.shadowRoot.querySelector('splitflap-card-editor');
+    if (editor) editor.hass = hass;
+
     const entityId = this._config.entity;
     const stateObj = hass.states[entityId];
     if (!stateObj) return;
@@ -139,6 +175,30 @@ class SplitflapCard extends HTMLElement {
     return this._config.rows + 1;
   }
 
+  /* ── Google Fonts loader ─────────────────────────── */
+
+  _loadGoogleFont(fontFamily) {
+    if (this._loadedFonts.has(fontFamily)) return;
+    if (!GOOGLE_FONTS.has(fontFamily)) {
+      // Check if it looks like a Google Font (not a system font)
+      const systemFonts = ['Courier New', 'Consolas', 'Arial', 'Helvetica', 'monospace',
+        'serif', 'sans-serif', 'SF Pro Display', 'Segoe UI', 'system-ui'];
+      if (systemFonts.some(sf => fontFamily.toLowerCase() === sf.toLowerCase())) return;
+    }
+
+    // Inject Google Font link into document head (not shadow DOM — fonts must be global)
+    const encoded = fontFamily.replace(/\s+/g, '+');
+    const linkId = `splitflap-font-${encoded}`;
+    if (!document.getElementById(linkId)) {
+      const link = document.createElement('link');
+      link.id = linkId;
+      link.rel = 'stylesheet';
+      link.href = `https://fonts.googleapis.com/css2?family=${encoded}:wght@300;400;700;800&display=swap`;
+      document.head.appendChild(link);
+    }
+    this._loadedFonts.add(fontFamily);
+  }
+
   /* ── Rendering ───────────────────────────────────── */
 
   _render() {
@@ -146,9 +206,21 @@ class SplitflapCard extends HTMLElement {
     const rows = c.rows;
     const cols = c.columns;
     const accent = c.accent_color;
-    const scrambleColors = (c.scramble_colors || DEFAULT_SCRAMBLE_COLORS).map(
-      (col, i) => `--sc${i}: ${col};`
-    ).join(' ');
+    const bgColor = c.background_color || '#1a1a1a';
+    const fontFamily = c.font_family || 'Courier New';
+    const fontWeightNum = FONT_WEIGHT_MAP[c.font_weight] || FONT_WEIGHT_MAP['bold'];
+    const barStyle = c.bar_style || 'rainbow';
+
+    // Bar CSS
+    let barTopCSS = '', barBottomCSS = '';
+    if (barStyle === 'rainbow') {
+      barTopCSS = `height: 4px; background: linear-gradient(90deg, ${accent} 0%, ${accent} 30%, #f5a623 50%, #4a90d9 70%, #7ed321 100%); border-radius: 2px; margin: 8px 10px;`;
+      barBottomCSS = `height: 4px; background: linear-gradient(90deg, #7ed321 0%, #4a90d9 30%, #f5a623 60%, ${accent} 100%); border-radius: 2px; margin: 4px 10px 10px;`;
+    } else if (barStyle === 'solid') {
+      barTopCSS = `height: 4px; background: ${accent}; border-radius: 2px; margin: 8px 10px;`;
+      barBottomCSS = `height: 4px; background: ${accent}; border-radius: 2px; margin: 4px 10px 10px;`;
+    }
+    // barStyle === 'off' → empty strings, bars won't render
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -157,11 +229,11 @@ class SplitflapCard extends HTMLElement {
           --accent: ${accent};
           --rows: ${rows};
           --cols: ${cols};
-          ${scrambleColors}
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
+        ${bgColor === 'transparent' ? 'ha-card { background: transparent !important; box-shadow: none !important; }' : ''}
         .vb-wrap {
-          background: #1a1a1a;
+          background: ${bgColor};
           border-radius: 12px;
           overflow: hidden;
           padding: 0;
@@ -176,14 +248,8 @@ class SplitflapCard extends HTMLElement {
           letter-spacing: 0.08em;
           padding: 12px 16px 0;
         }
-        .vb-bar {
-          height: 4px;
-          background: linear-gradient(90deg,
-            var(--accent) 0%, var(--accent) 30%,
-            #f5a623 50%, #4a90d9 70%, #7ed321 100%);
-          border-radius: 2px;
-          margin: 8px 10px;
-        }
+        .vb-bar-top { ${barTopCSS} }
+        .vb-bar-bottom { ${barBottomCSS} }
         .vb-board {
           display: grid;
           grid-template-columns: repeat(var(--cols), 1fr);
@@ -213,8 +279,8 @@ class SplitflapCard extends HTMLElement {
           z-index: 2;
         }
         .tile-char {
-          font-family: 'Courier New', 'Consolas', monospace;
-          font-weight: 700;
+          font-family: '${fontFamily}', 'Courier New', monospace;
+          font-weight: ${fontWeightNum};
           color: #f0f0f0;
           line-height: 1;
           user-select: none;
@@ -231,26 +297,22 @@ class SplitflapCard extends HTMLElement {
         .tile.flipping .tile-char {
           animation: scrambleIn 0.25s ease-out forwards;
         }
-        .vb-bar-bottom {
-          height: 4px;
-          background: linear-gradient(90deg,
-            #7ed321 0%, #4a90d9 30%,
-            #f5a623 60%, var(--accent) 100%);
-          border-radius: 2px;
-          margin: 4px 10px 10px;
-        }
       </style>
 
       <ha-card>
         <div class="vb-wrap">
           ${c.title ? `<div class="vb-title">${c.title}</div>` : ''}
-          <div class="vb-bar"></div>
+          ${barStyle !== 'off' ? '<div class="vb-bar-top"></div>' : ''}
           <div class="vb-board" id="board"></div>
-          <div class="vb-bar-bottom"></div>
+          ${barStyle !== 'off' ? '<div class="vb-bar-bottom"></div>' : ''}
         </div>
       </ha-card>
     `;
 
+    // Load Google Font if needed
+    this._loadGoogleFont(fontFamily);
+
+    // Build tile grid
     const board = this.shadowRoot.getElementById('board');
     this._tiles = [];
     this._currentGrid = [];
@@ -345,6 +407,7 @@ class SplitflapCard extends HTMLElement {
     const rows = this._config.rows;
     const cols = this._config.columns;
     const animate = this._config.animation !== false;
+    const colorMode = this._config.color_mode || 'default';
 
     const changes = [];
     for (let r = 0; r < rows; r++) {
@@ -358,12 +421,10 @@ class SplitflapCard extends HTMLElement {
     if (changes.length === 0) return;
 
     if (animate) {
-      // Pre-schedule sounds
       if (this._config.sound && changes.length > 0) {
         this._scheduleFlipSounds(changes.length, stagger, duration);
       }
 
-      // Animate each changed tile with stagger
       changes.forEach((ch, idx) => {
         const tileIdx = ch.r * cols + ch.c2;
         const tile = this._tiles[tileIdx];
@@ -371,20 +432,23 @@ class SplitflapCard extends HTMLElement {
         const scrambleSteps = Math.floor(duration / 60);
 
         setTimeout(() => {
-          this._scrambleTile(tile, ch.target, scrambleSteps, colors);
+          this._scrambleTile(tile, ch.target, scrambleSteps, colors, colorMode);
         }, delay);
       });
     } else {
-      // E-ink / no-animation mode — instant update
+      // E-ink / no-animation mode
       changes.forEach((ch) => {
         const tileIdx = ch.r * cols + ch.c2;
         const tile = this._tiles[tileIdx];
         tile.charEl.textContent = ch.target;
-        tile.el.style.backgroundColor = '';
+        if (colorMode === 'random' && ch.target !== ' ') {
+          tile.el.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+        } else {
+          tile.el.style.backgroundColor = '';
+        }
       });
     }
 
-    // Update current grid
     for (let r = 0; r < rows; r++) {
       for (let c2 = 0; c2 < cols; c2++) {
         this._currentGrid[r][c2] = newGrid[r][c2];
@@ -392,13 +456,18 @@ class SplitflapCard extends HTMLElement {
     }
   }
 
-  _scrambleTile(tile, targetChar, steps, colors) {
+  _scrambleTile(tile, targetChar, steps, colors, colorMode) {
     let step = 0;
     const interval = setInterval(() => {
       if (step >= steps) {
         clearInterval(interval);
         tile.charEl.textContent = targetChar;
-        tile.el.style.backgroundColor = '';
+        // Random colour mode: non-space tiles keep a colour
+        if (colorMode === 'random' && targetChar !== ' ') {
+          tile.el.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+        } else {
+          tile.el.style.backgroundColor = '';
+        }
         tile.el.classList.add('flipping');
         setTimeout(() => tile.el.classList.remove('flipping'), 260);
         return;
@@ -537,6 +606,19 @@ class SplitflapCardEditor extends HTMLElement {
     super();
     this.attachShadow({ mode: 'open' });
     this._config = {};
+    this._hass = null;
+  }
+
+  set hass(hass) {
+    this._hass = hass;
+    // Populate entity datalist with all available entities
+    const datalist = this.shadowRoot && this.shadowRoot.getElementById('entity-list');
+    if (datalist && hass) {
+      datalist.innerHTML = Object.keys(hass.states)
+        .sort()
+        .map(id => `<option value="${id}">${hass.states[id].attributes.friendly_name ? hass.states[id].attributes.friendly_name + ' (' + id + ')' : id}</option>`)
+        .join('');
+    }
   }
 
   setConfig(config) {
@@ -546,6 +628,12 @@ class SplitflapCardEditor extends HTMLElement {
 
   _render() {
     const c = this._config;
+    const fontOptions = [
+      'Courier New', 'Consolas', 'Roboto Mono', 'JetBrains Mono',
+      'Fira Mono', 'Source Code Pro', 'IBM Plex Mono', 'Space Mono',
+      'Ubuntu Mono', 'PT Mono',
+    ].map(f => `<option value="${f}" ${(c.font_family || 'Courier New') === f ? 'selected' : ''}>${f}</option>`).join('');
+
     this.shadowRoot.innerHTML = `
       <style>
         :host { display: block; padding: 16px; }
@@ -566,12 +654,16 @@ class SplitflapCardEditor extends HTMLElement {
         }
         .cols-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         .hint { font-size: 11px; color: var(--secondary-text-color); margin-top: 2px; }
+        .custom-font-row { margin-top: 4px; }
+        .custom-font-row input { font-size: 13px; }
       </style>
 
       <div class="section">General</div>
       <div class="row">
-        <label>Entity (input_text)</label>
-        <input id="entity" value="${c.entity || ''}" placeholder="input_text.splitflap_message" />
+        <label>Entity</label>
+        <input id="entity" list="entity-list" value="${c.entity || ''}" placeholder="Start typing to search entities..." />
+        <datalist id="entity-list"></datalist>
+        <div class="hint">Works with input_text, template sensors, or any entity with a text state</div>
       </div>
       <div class="row">
         <label>Title (optional)</label>
@@ -592,9 +684,58 @@ class SplitflapCardEditor extends HTMLElement {
         <input id="line_separator" value="${c.line_separator || '|'}" maxlength="1" />
         <div class="hint">Use this character in your message to force a new line</div>
       </div>
-      <div class="row">
-        <label>Accent colour</label>
-        <input id="accent_color" type="color" value="${c.accent_color || DEFAULT_ACCENT}" />
+
+      <div class="section">Appearance</div>
+      <div class="cols-2">
+        <div class="row">
+          <label>Font</label>
+          <select id="font_family">${fontOptions}<option value="custom" ${!['Courier New','Consolas','Roboto Mono','JetBrains Mono','Fira Mono','Source Code Pro','IBM Plex Mono','Space Mono','Ubuntu Mono','PT Mono'].includes(c.font_family || 'Courier New') ? 'selected' : ''}>Custom...</option></select>
+        </div>
+        <div class="row">
+          <label>Font weight</label>
+          <select id="font_weight">
+            <option value="light" ${c.font_weight === 'light' ? 'selected' : ''}>Light</option>
+            <option value="normal" ${c.font_weight === 'normal' ? 'selected' : ''}>Normal</option>
+            <option value="bold" ${(!c.font_weight || c.font_weight === 'bold') ? 'selected' : ''}>Bold</option>
+            <option value="extra-bold" ${c.font_weight === 'extra-bold' ? 'selected' : ''}>Extra Bold</option>
+          </select>
+        </div>
+      </div>
+      <div class="row custom-font-row" id="custom-font-row" style="display:${!['Courier New','Consolas','Roboto Mono','JetBrains Mono','Fira Mono','Source Code Pro','IBM Plex Mono','Space Mono','Ubuntu Mono','PT Mono'].includes(c.font_family || 'Courier New') ? 'block' : 'none'}">
+        <label>Custom font name</label>
+        <input id="custom_font" value="${!['Courier New','Consolas','Roboto Mono','JetBrains Mono','Fira Mono','Source Code Pro','IBM Plex Mono','Space Mono','Ubuntu Mono','PT Mono'].includes(c.font_family || 'Courier New') ? (c.font_family || '') : ''}" placeholder="e.g. SF Pro Display, Oswald" />
+        <div class="hint">System font or Google Font name</div>
+      </div>
+      <div class="cols-2">
+        <div class="row">
+          <label>Accent colour</label>
+          <input id="accent_color" type="color" value="${c.accent_color || DEFAULT_ACCENT}" />
+        </div>
+        <div class="row">
+          <label>Background colour</label>
+          <input id="background_color" type="color" value="${(!c.background_color || c.background_color === 'transparent') ? '#1a1a1a' : c.background_color}" ${c.background_color === 'transparent' ? 'disabled' : ''} />
+          <label style="display:flex;align-items:center;gap:6px;margin-top:4px;font-weight:400;font-size:12px;">
+            <input id="bg_transparent" type="checkbox" ${c.background_color === 'transparent' ? 'checked' : ''} style="width:auto;" />
+            Transparent
+          </label>
+        </div>
+      </div>
+      <div class="cols-2">
+        <div class="row">
+          <label>Bars</label>
+          <select id="bar_style">
+            <option value="rainbow" ${(!c.bar_style || c.bar_style === 'rainbow') ? 'selected' : ''}>Rainbow</option>
+            <option value="solid" ${c.bar_style === 'solid' ? 'selected' : ''}>Solid (accent colour)</option>
+            <option value="off" ${c.bar_style === 'off' ? 'selected' : ''}>Off</option>
+          </select>
+        </div>
+        <div class="row">
+          <label>Tile colours</label>
+          <select id="color_mode">
+            <option value="default" ${(!c.color_mode || c.color_mode === 'default') ? 'selected' : ''}>Default (dark)</option>
+            <option value="random" ${c.color_mode === 'random' ? 'selected' : ''}>Random per character</option>
+          </select>
+        </div>
       </div>
 
       <div class="section">Animation</div>
@@ -650,7 +791,51 @@ class SplitflapCardEditor extends HTMLElement {
       </div>
     `;
 
-    ['entity', 'title', 'rows', 'columns', 'line_separator', 'accent_color',
+    // Font family dropdown → show/hide custom font field
+    const fontSelect = this.shadowRoot.getElementById('font_family');
+    const customFontRow = this.shadowRoot.getElementById('custom-font-row');
+    fontSelect.addEventListener('change', () => {
+      if (fontSelect.value === 'custom') {
+        customFontRow.style.display = 'block';
+      } else {
+        customFontRow.style.display = 'none';
+        this._config = { ...this._config, font_family: fontSelect.value };
+        this.dispatchEvent(new CustomEvent('config-changed', {
+          detail: { config: this._config },
+        }));
+      }
+    });
+
+    // Custom font name input
+    const customFontInput = this.shadowRoot.getElementById('custom_font');
+    customFontInput.addEventListener('change', () => {
+      if (customFontInput.value.trim()) {
+        this._config = { ...this._config, font_family: customFontInput.value.trim() };
+        this.dispatchEvent(new CustomEvent('config-changed', {
+          detail: { config: this._config },
+        }));
+      }
+    });
+
+    // Transparent background checkbox
+    const bgTransparent = this.shadowRoot.getElementById('bg_transparent');
+    const bgColorInput = this.shadowRoot.getElementById('background_color');
+    bgTransparent.addEventListener('change', () => {
+      if (bgTransparent.checked) {
+        bgColorInput.disabled = true;
+        this._config = { ...this._config, background_color: 'transparent' };
+      } else {
+        bgColorInput.disabled = false;
+        this._config = { ...this._config, background_color: bgColorInput.value };
+      }
+      this.dispatchEvent(new CustomEvent('config-changed', {
+        detail: { config: this._config },
+      }));
+    });
+
+    // Wire up all other change events
+    ['entity', 'title', 'rows', 'columns', 'line_separator', 'accent_color', 'background_color',
+     'font_weight', 'bar_style', 'color_mode',
      'animation', 'scramble_duration', 'stagger_delay',
      'sound', 'sound_type', 'sound_delay', 'sound_every'].forEach(key => {
       const el = this.shadowRoot.getElementById(key);
